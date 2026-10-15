@@ -1,0 +1,41 @@
+# ===============================
+# Dados e Imagens Privadas
+# ===============================
+Dataset/
+Dataset/*
+Outliers_Encontrados/
+Outliers_Encontrados/*
+
+# Extensões de Imagem (ocultar amostras brutas e fotos)
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.tif
+*.tiff
+*.webp
+
+# ===============================
+# Ambientes Virtuais e Python
+# ===============================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.venv/
+venv/
+env/
+ENV/
+
+# ===============================
+# IDEs e Sistema Operacional
+# ===============================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
