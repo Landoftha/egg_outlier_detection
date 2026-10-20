@@ -5,6 +5,10 @@ Dataset/
 Dataset/*
 Outliers_Encontrados/
 Outliers_Encontrados/*
+Augmented_Images(Eggs)/
+Eggs Classification/
+Kaggle Dataset/
+Original Images(Eggs)/
 
 # Extensões de Imagem (ocultar amostras brutas e fotos)
 *.jpg

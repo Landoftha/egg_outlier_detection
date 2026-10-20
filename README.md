@@ -64,18 +64,30 @@ python detect_outliers.py
 ```
 > As anomalias encontradas serão listadas no terminal, salvas em `outliers_summary.csv` e copiadas para a pasta `Outliers_Encontrados/` com os respectivos prefixos de classificação.
 
+### 4. Treinar a Rede Neural (Autoencoder + MLP Classificadora)
+```bash
+python train_neural_network.py
+```
+> Treina uma Rede Neural Autoencoder não-supervisionada (`17 -> 10 -> 4 -> 10 -> 17`, atingindo **97,45% de ROC-AUC**) e uma Rede Neural Densa `MLPClassifier` (`17 -> 64 -> 32 -> 1`, atingindo **92,71% de acurácia** em validação cruzada de 5 folds), gerando `nn_predictions.csv` e `egg_neural_network.pkl`.
+
 ---
 
 ## 📁 Estrutura do Repositório
 
 ```text
-├── .gitignore               # Protege dados brutos e fotos privadas
-├── requirements.txt         # Dependências do projeto
-├── README.md                # Documentação técnica
-├── extract_features.py      # Pipeline de segmentação e extração de métricas
-├── detect_outliers.py       # Algoritmos estatísticos e Isolation Forest
-├── egg_features.csv         # Características extraídas (tabela de dados)
-└── outliers_summary.csv     # Relatório detalhado dos outliers detectados
+├── .gitignore                      # Protege dados brutos e fotos privadas
+├── requirements.txt                # Dependências do projeto
+├── README.md                       # Documentação técnica
+├── extract_features.py             # Pipeline de segmentação e extração (Dataset autoral)
+├── extract_supervised_features.py  # Extração de features para Ovoscopia e Kaggle Dataset
+├── detect_outliers.py              # Algoritmos estatísticos (IQR) e Isolation Forest
+├── train_neural_network.py         # Treinamento de Rede Neural (Autoencoder + MLP)
+├── egg_features.csv                # Características extraídas (Dataset autoral)
+├── candling_features.csv           # Características extraídas (Ovoscopia - 1.000 ovos)
+├── kaggle_features.csv             # Características extraídas (Kaggle - 794 ovos)
+├── outliers_summary.csv            # Relatório detalhado dos outliers detectados
+├── nn_predictions.csv              # Predições e erros de reconstrução da Rede Neural
+└── egg_neural_network.pkl          # Pesos salvos da Rede Neural treinada
 ```
 
 > **Nota sobre o Dataset:** Conforme diretrizes de privacidade e propriedade da amostra, o conjunto de imagens brutas (`Dataset/` e `Outliers_Encontrados/`) está protegido e omitido do versionamento através do `.gitignore`.
