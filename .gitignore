@@ -7,15 +7,24 @@ Outliers_Encontrados/
 Outliers_Encontrados/*
 Visualizacao_Features/
 Visualizacao_Features/*
+New sample/
+New sample/*
+Visual/*
+!Visual/Comparativo_Geral.png
+!Visual/Comparativo_New_Sample_Professor.png
+!Visual/Graficos_Resultados_Exp2_Professor.png
 Augmented_Images(Eggs)/
 Eggs Classification/
 Kaggle Dataset/
 Original Images(Eggs)/
 
-# Extensões de Imagem (ocultar amostras brutas e fotos)
+# Extensões de Imagem (ocultar amostras brutas e fotos, exceto pranchas comparativas em Visual/)
 *.jpg
 *.jpeg
 *.png
+!Visual/Comparativo_Geral.png
+!Visual/Comparativo_New_Sample_Professor.png
+!Visual/Graficos_Resultados_Exp2_Professor.png
 *.bmp
 *.tif
 *.tiff
