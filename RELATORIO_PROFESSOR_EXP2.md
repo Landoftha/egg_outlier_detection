@@ -7,12 +7,24 @@
 
 ---
 
+> ## ⚠️ Errata (12/Nov/2026) — leia antes do restante do relatório
+>
+> Uma revisão posterior encontrou três problemas neste relatório. O texto original foi mantido abaixo como registro histórico, com marcações **[ERRATA]** nos trechos afetados. As correções metodológicas estão no **Experimento 3** (`workflow_exp3_real_cracks.py`, ver `README.md`).
+>
+> 1. **Trincas desenhadas a lápis misturadas com trincas reais.** As 87 fotos de "ovos quebrados" da sessão `08/Nov` (17 ovos físicos) são **trincas desenhadas a lápis**, criadas para contornar a falta de ovos trincados. Apenas 24 fotos (7 ovos físicos, sessões `03/Nov` e `04/Nov`) são trincas reais. Os conjuntos de validação e teste deste relatório misturam os dois tipos — a maior parte das trincas avaliadas era de lápis. Portanto, **os AUROCs e recalls abaixo não medem a detecção de trincas reais**. Na tabela por sessão (Seção 6), a sessão `04/Nov` — só trincas reais — teve recall de apenas **46,2% (6/13)**.
+> 2. **Condições de captura descritas incorretamente.** A Coleta v2 foi feita com **câmera fixa na mesma posição e iluminação fixa** em todas as sessões; apenas o **zoom** variou entre sessões. A afirmação de que `08/Nov` foi "fotografada sob iluminação artificial inclinada e maior distância" está errada, e a conclusão de que o FPR maior em `08/Nov` se deve à iluminação não tem base.
+> 3. **Custo assimétrico apresentado como fato e atribuído aos comentários.** O comentário original pedia apenas para "registrar o limiar e o custo de cada tipo de erro"; ele não afirmou qual erro é mais caro. A razão $C_{FN}:C_{FP}$ depende de cada granja e é tratada como **cenário** no Exp 3. Além disso, a função de custo usada aqui ignora a **prevalência real** de ovos trincados (equivale a supor 50% de trincados); o Exp 3 corrige isso.
+>
+> Um quarto problema, de código: no Exp 2C, as features `PatchCore` dos ovos bons de treino foram calculadas contra um banco de memória que **continha o próprio ovo** (distância ≈ 0), o que distorce o treino da rede densa. Corrigido no Exp 3 (cálculo *out-of-fold*).
+
+---
+
 ## 1. Motivação e Feedback da Revisão por Pares (Indústria / LinkedIn)
 
 Na Coleta v1 (`Dataset/` com 191 imagens: 181 ovos bons e 10 ovos quebrados), o modelo preliminar atingiu **99,0% de ROC-AUC (100% de Recall em $n=5$ ovos trincados no teste)**. Ao submeter os resultados à comunidade técnica de Visão Computacional, três pontos metodológicos fundamentais foram levantados por profissionais da área:
 
 1. **Largura do Intervalo de Confiança e Vazamento de Ambiente:** Com apenas 10 ovos trincados divididos entre validação e teste, um Recall de 100% ($5/5$) possuía um Intervalo de Confiança de 95% de Wilson largo ($[56,6\%, 100,0\%]$). Além disso, recomendou-se separar e avaliar os dados levando em conta **sessões de captura distintas (dia, lote, iluminação)** e **indivíduos físicos** (evitando que duas fotos do mesmo ovo em ângulos diferentes caíssem no treino e no teste).
-2. **Limiar de Anomalia ($\tau$) e Custo Assimétrico de Erro na Granja:** Na indústria avícola, um **Falso Positivo ($C_{FP}$)** desvia um ovo bom para processamento industrial líquido (custo baixo), enquanto um **Falso Negativo ($C_{FN}$)** deixa passar um ovo trincado para a embalagem comercial (risco sanitário de *Salmonella*, vazamento na bandeja e penalidade comercial — custo alto). O limiar $\tau$ deve ser calibrado explicitamente em função dessa razão de custo ($C_{FN}:C_{FP}$).
+2. **[ERRATA — ver item 3 da errata] Limiar de Anomalia ($\tau$) e Custo Assimétrico de Erro na Granja:** Na indústria avícola, um **Falso Positivo ($C_{FP}$)** desvia um ovo bom para processamento industrial líquido (custo baixo), enquanto um **Falso Negativo ($C_{FN}$)** deixa passar um ovo trincado para a embalagem comercial (risco sanitário de *Salmonella*, vazamento na bandeja e penalidade comercial — custo alto). O limiar $\tau$ deve ser calibrado explicitamente em função dessa razão de custo ($C_{FN}:C_{FP}$).
 3. **Falso Positivo por Sessão/Lote e Textura Superficial (Porosidade):** Ovos de diferentes sessões/lotes variam na porosidade natural da casca. Filtros de borda ou distâncias absolutas podem confundir cascas naturalmente mais porosas com microtrincas.
 
 ---
@@ -26,7 +38,7 @@ Para responder a esses três pontos, foi realizada a **Coleta v2 (`New sample/`)
   * **Sessão `2026-11-03`:** 51 fotos (`47 Ovos Bons` | `4 Ovos Quebrados`)
   * **Sessão `2026-11-04`:** 156 fotos (`136 Ovos Bons` | `20 Ovos Quebrados`)
   * **Sessão `2026-11-07`:** 219 fotos (`219 Ovos Bons` | `0 Ovos Quebrados` — *Lote de Controle Normal*)
-  * **Sessão `2026-11-08`:** 306 fotos (`219 Ovos Bons` | `87 Ovos Quebrados`)
+  * **Sessão `2026-11-08`:** 306 fotos (`219 Ovos Bons` | `87 Ovos Quebrados`) — **[ERRATA] os 87 são trincas desenhadas a lápis**
   * **Total:** **621 fotos de Ovos Bons** e **111 fotos de Ovos Quebrados** (aumento de **11,1x** no volume de amostras com rachadura).
 * **Agrupamento Temporal por Ovo Físico (`egg_group_id` via $|\Delta t| \le 25\text{s}$):**
   * Como cada ovo foi fotografado girando em sequência, extraímos o *timestamp* exato do nome do arquivo (`IMG_YYYYMMDD_HHMMSS.jpg`) e agrupamos fotos consecutivas ($|\Delta t| \le 25\text{s}$) no mesmo cluster físico.
@@ -101,4 +113,4 @@ Respondendo diretamente à questão levantada no LinkedIn sobre a estabilidade d
 | **Sessão 3 (`07/Nov/2026`)** | 78 | 78 | 0 | 2 | **2,6%** (`[0,7%, 9,0%]`) | N/A (Controle) |
 | **Sessão 4 (`08/Nov/2026`)** | 106 | 58 | 48 | 12 | **20,7%** (`[12,2%, 32,8%]`) | **83,3%** (40/48) |
 
-* **Conclusão Experimental Importante:** Nas três sessões diurnas (`03/Nov`, `04/Nov` e `07/Nov`), a taxa de falsos positivos manteve-se extremamente baixa (**entre 2,6% e 8,3%**), comprovando que a normalização intra-ovo do `PatchCore` resolveu a confusão com a porosidade natural da casca. Já na sessão noturna (`08/Nov`, fotografada sob iluminação artificial inclinada e maior distância), o FPR subiu para **20,7%**, demonstrando empiricamente o ganho que será obtido na próxima etapa com suporte de **câmera estática e iluminação fixa**.
+* **[ERRATA — ver itens 1 e 2 da errata: câmera e iluminação eram fixas; os 48 "quebrados" de `08/Nov` são trincas a lápis; esta conclusão não se sustenta]** **Conclusão Experimental Importante (original):** Nas três sessões diurnas (`03/Nov`, `04/Nov` e `07/Nov`), a taxa de falsos positivos manteve-se extremamente baixa (**entre 2,6% e 8,3%**), comprovando que a normalização intra-ovo do `PatchCore` resolveu a confusão com a porosidade natural da casca. Já na sessão noturna (`08/Nov`, fotografada sob iluminação artificial inclinada e maior distância), o FPR subiu para **20,7%**, demonstrando empiricamente o ganho que será obtido na próxima etapa com suporte de **câmera estática e iluminação fixa**.
