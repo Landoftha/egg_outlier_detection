@@ -435,6 +435,15 @@ def run_split(seed, data, backbone, greedy=True):
 
     res = {'split': split, 'oc': oc_score, 'hyb': hyb_score, 'n_train_imgs': len(tr_items),
            'n_bank': int(bank.shape[0]), 'clf': clf, 'scaler': sc}
+
+    # --- Teste externo: Coleta v1 (nunca usada em treino, validação ou escolha de limiar) ---
+    if data.get('ext') is not None:
+        ext = data['ext']
+        ext_pc = patch_scores(ext['patches'], bank)
+        res['oc_ext'] = oc(ext_pc, ext['morph'])
+        res['hyb_ext'] = clf.predict_proba(sc.transform(np.hstack([ext_pc, ext['morph']])))[:, 1]
+        for name in ['oc', 'hyb']:
+            res[f'{name}_ext_auc'] = roc_auc_score(ext['labels'], res[f'{name}_ext'])
     for name, sco in [('oc', oc_score), ('hyb', hyb_score)]:
         for part in ['val', 'test']:
             m = split == part
@@ -506,8 +515,27 @@ def main():
 
     backbone = LightBackbone().to(DEVICE).eval()
     patches = extract_patches(backbone, masked, inner28)
+    del masked, mm, loc
+
+    # Coleta v1 (Dataset/): trincas reais de outros ovos, câmera não fixa. Usada SÓ como teste externo.
+    v1_paths = sorted(glob.glob(os.path.join('Dataset', '*.jpg')))
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        v1_loc = list(ex.map(locate_egg, v1_paths))
+    ext_idx = [i for i, r_ in enumerate(v1_loc) if r_ is not None and r_[0] not in seen]
+    ext_names = np.array([os.path.basename(v1_paths[i]) for i in ext_idx])
+    ext_labels = np.array([1 if n.lower().startswith('cracked') else 0 for n in ext_names])
+    ext_mm = [mask_and_morph(v1_loc[i][1], v1_loc[i][2]) for i in ext_idx]
+    del v1_loc
+    ext = dict(names=ext_names, labels=ext_labels, morph=np.array([x[2] for x in ext_mm]),
+               patches=extract_patches(backbone, [x[0] for x in ext_mm], [x[1] for x in ext_mm]))
+    del ext_mm
+    # 'cracked 1' e 'cracked 2' são o mesmo ovo na mesma posição -> mesmo grupo no bootstrap
+    ext['groups'] = np.array([('cracked 1' if n in ('cracked 1.jpg', 'cracked 2.jpg') else n) for n in ext_names])
+    print(f'    Teste externo (Coleta v1, câmera não fixa): {len(ext_names)} fotos | '
+          f'bons={np.sum(ext_labels == 0)} | trincas reais={np.sum(ext_labels == 1)}')
+
     data = dict(labels=labels, groups=groups, kind=kind, sessions=sessions, crops=crops,
-                masks=masks, patches=patches, morph=morph)
+                masks=masks, patches=patches, morph=morph, ext=ext)
 
     # ---------------- Divisão principal (seed 42) ----------------
     r = run_split(SEED, data, backbone)
@@ -540,6 +568,26 @@ def main():
         print(f'   {names[k]:38s} só sessão 04/Nov (val+test): {r[k+"_s04_auc"]*100:5.1f}%'
               f' | trincas a lápis (relatório à parte): {r[k+"_pencil_auc"]*100:5.1f}%')
     print(f'   → Modelo escolhido pela validação: {names[best]}')
+
+    # ---------------- Teste externo (Coleta v1) ----------------
+    print('\n[3b] Teste EXTERNO — Coleta v1 (outros ovos, câmera não fixa; nunca vista no treino nem no limiar):')
+    ext_rows = []
+    for k in ['oc', 'hyb']:
+        a, lo, hi = group_bootstrap_auc(ext['labels'], r[f'{k}_ext'], ext['groups'])
+        rows_auc.append((k, 'external_v1', a, lo, hi))
+        print(f'   {names[k]:38s} AUROC = {a*100:5.1f}% [{lo*100:5.1f}%, {hi*100:5.1f}%]')
+    ext_thr = {}
+    for ratio in COST_RATIOS:
+        t = pick_threshold(labels[split == 'val'], r[best][split == 'val'], PREVALENCE_BASE, ratio)
+        tp, fn, tn, fp = rates(ext['labels'], r[f'{best}_ext'], t)
+        rec, rlo, rhi = wilson_ci(tp, tp + fn)
+        fpr, flo, fhi = wilson_ci(fp, fp + tn)
+        ext_thr[ratio] = dict(tau=t, tp=tp, fn=fn, tn=tn, fp=fp, recall=rec, fpr=fpr)
+        print(f'   π=3% C_FN:C_FP={ratio:>2}:1 | τ={t:7.3f} | recall={rec*100:5.1f}% ({tp}/{tp+fn}) '
+              f'[{rlo*100:4.1f}–{rhi*100:5.1f}] | FPR={fpr*100:5.1f}% ({fp}/{fp+tn}) [{flo*100:4.1f}–{fhi*100:4.1f}]')
+    pd.DataFrame({'filename': ext['names'], 'true_label': ext['labels'],
+                  'exp3_oneclass_score': np.round(r['oc_ext'], 6),
+                  'exp3_hybrid_prob': np.round(r['hyb_ext'], 6)}).to_csv('exp3_external_v1.csv', index=False)
 
     # ---------------- Limiar por custo esperado ----------------
     print('\n[4] Limiar pelo menor custo esperado por ovo (prevalência real), avaliado no TESTE:')
@@ -592,6 +640,7 @@ def main():
         'session04_auc': {k: r[k + '_s04_auc'] for k in ['oc', 'hyb']},
         'pencil_auc': {k: r[k + '_pencil_auc'] for k in ['oc', 'hyb']},
         'cpu_latency_ms': lat, 'backbone_params': params,
+        'external_v1_thresholds_prev3pct': ext_thr,
     }
     with open('exp3_summary.json', 'w', encoding='utf-8') as fh:
         json.dump(summary, fh, indent=2, default=float)
@@ -613,7 +662,7 @@ def main():
     summary['repeated'] = {}
     for k in ['oc', 'hyb']:
         summary['repeated'][k] = {}
-        for col in ['test_auc', 's04_auc', 'pencil_auc']:
+        for col in ['test_auc', 's04_auc', 'pencil_auc', 'ext_auc']:
             v = reps[f'{k}_{col}'].dropna()
             summary['repeated'][k][col] = dict(median=float(v.median()), p10=float(v.quantile(.1)),
                                                p90=float(v.quantile(.9)), n=int(len(v)))

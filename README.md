@@ -16,7 +16,7 @@ O projeto é conduzido como um **experimento científico iterativo**. O modelo a
 | **Exp 1B (Coleta v1)** | `MobileNetV3-Small` (*Deep Embeddings* k-NN) + Morfologia (*Top-Hat* + *Laplaciano*) | **Banco de Memória:** 141 Bons<br>**Val:** 20 Bons + 5 Trincados ($n=25$)<br>**Teste:** 20 Bons + 5 Trincados ($n=25$) | **Validação ($n=25$):** `ROC-AUC = 88,00%`, `Recall = 100%` (5/5)<br>**Teste ($n=25$):** `ROC-AUC = 99,00%`, `Acurácia = 92,00%`, `Recall = 100%` (5/5). | ✅ Prova de Conceito v1 |
 | **Exp 2B (Coleta v2 — One-Class)** | **`Self-Normalized Spatial PatchCore`** (`MobileNetV3-Large` + `ResNet18` $28\times 28$, $\Delta d_p = d_p - \text{mediana}(d)$) + Anisotropia (`max_elongation`) | **732 fotos únicas (`New sample/`)** em 4 sessões (`03`, `04`, `07`, `08/Nov`) e 81 grupos físicos:<br>**Treino:** 436 Bons (0 Trincados)<br>**Val:** 120B + 49Q ($n=169$)<br>**Teste:** 65B + 62Q ($n=127$) | **Validação:** `ROC-AUC = 86,09%` (95% CI: `[79,4%, 92,0%]`)<br>**Teste:** `ROC-AUC = 80,72%` (95% CI: `[72,2%, 88,3%]`)<br>**Global (111 Quebrados):** **`ROC-AUC = 83,47%`** (`[78,7%, 88,3%]`). Subtrair a mediana intra-ovo neutraliza falsos positivos causados pela porosidade da casca! | ✅ **Sucesso One-Class v2** |
 | **Exp 2C (Coleta v2 — Híbrido Calibrado)** | **`HybridCrackNet`** (Fusão `PatchCore` + `Deep MLP` com `EarlyStopping`) + **Calibração por Custo Industrial ($C_{FN}:C_{FP}$)** | **732 fotos (`New sample/`)** sem vazamento entre ângulos do mesmo ovo:<br>**Treino:** 436B + 49Q<br>**Val:** 120B + 26Q ($n=146$)<br>**Teste:** 65B + 36Q ($n=101$) | **Validação:** **`ROC-AUC = 91,09%`** (95% CI: `[84,2%, 96,5%]`)<br>**Teste:** **`ROC-AUC = 89,19%`** (95% CI: `[81,7%, 95,3%]`)<br>• **Custo 1:1 ($\tau=0,4430$):** `FPR = 7,7%`, `Recall = 66,7%`, `F1 = 73,8%`<br>• **Custo 5:1 ($\tau=0,3509$):** `Recall = 83,3%`, `FPR = 27,7%`<br>• **Custo 10:1 ($\tau=0,2549$):** **`Recall = 97,2%` (35/36)**, `FPR = 67,7%`. | ⚠️ **Superado pelo Exp 3** (avaliação misturava trincas a lápis) |
-| **Exp 3 (Coleta v2 — Só Trincas Reais na Avaliação)** | **PatchCore leve** (`MobileNetV3-Small` truncada no bloco 8, **191 mil parâmetros**, congelada) + banco de memória de 8000 patches + *data augmentation* no treino + **limiar por custo esperado com prevalência real** | **732 fotos**, divisão por ovo físico, 0 vazamento:<br>**Treino:** 343 bons + 69 trincas **a lápis** (×5 com augmentation)<br>**Val:** 140B + 12 trincas **reais** (3 ovos)<br>**Teste:** 138B + 12 trincas **reais** (4 ovos) | **Teste (só trincas reais):** `ROC-AUC = 89,1%` (IC 95% por ovo: `[75,2%, 94,7%]`); mediana em 25 divisões: **89,3%** (P10–P90: 86,8%–91,7%)<br>**Só sessão 04/Nov** (mesmo zoom): mediana **81,7%**<br>**Prevalência 3%, custo 20:1:** `Recall = 75%`, `FPR = 12,3%`, prejuízo **−55%** vs. sem inspeção<br>**CPU:** 22 ms/foto (1 núcleo), modelo ≈ 2 MB | ✅ **Melhor Modelo Atual** (amostra de trincas reais ainda pequena) |
+| **Exp 3 (Coleta v2 — Só Trincas Reais na Avaliação)** | **PatchCore leve** (`MobileNetV3-Small` truncada no bloco 8, **191 mil parâmetros**, congelada) + banco de memória de 8000 patches + *data augmentation* no treino + **limiar por custo esperado com prevalência real** | **732 fotos**, divisão por ovo físico, 0 vazamento:<br>**Treino:** 343 bons + 69 trincas **a lápis** (×5 com augmentation)<br>**Val:** 140B + 12 trincas **reais** (3 ovos)<br>**Teste:** 138B + 12 trincas **reais** (4 ovos) | **Teste (só trincas reais):** `ROC-AUC = 89,1%` (IC 95% por ovo: `[75,2%, 94,7%]`); mediana em 25 divisões: **89,3%** (P10–P90: 86,8%–91,7%)<br>**Só sessão 04/Nov** (mesmo zoom): mediana **81,7%**<br>**Teste externo (Coleta v1, outros ovos, câmera não fixa):** **97,3%**, recall 10/10<br>**Prevalência 3%, custo 20:1:** `Recall = 75%`, `FPR = 12,3%`, prejuízo **−55%** vs. sem inspeção<br>**CPU:** 22 ms/foto (1 núcleo), modelo ≈ 2 MB | ✅ **Melhor Modelo Atual** (amostra de trincas reais ainda pequena) |
 
 > **Nota sobre Transparência Estatística e Evolução para a Coleta v2:** O índice de **99,00% de ROC-AUC (100% de Recall)** no Experimento 1B foi obtido sobre um conjunto de teste inicial controlado de **$n = 25$ imagens** (20 ovos íntegros e 5 ovos trincados). A partir do feedback técnico de especialistas da área (sobre intervalo de confiança em amostras pequenas, separação por sessão de captura, porosidade superficial e calibração por custo industrial), o projeto avançou para a **Coleta v2 (`New sample/` com $N = 732$ fotos únicas: 621 ovos bons e 111 ovos quebrados em 4 sessões e 81 grupos físicos)**. Consulte [`SPECS.md`](SPECS.md) e [`RELATORIO_PROFESSOR_EXP2.md`](RELATORIO_PROFESSOR_EXP2.md) para o detalhamento completo.
 
@@ -26,7 +26,7 @@ O projeto é conduzido como um **experimento científico iterativo**. O modelo a
 
 ## 🧪 Experimento 3 — Avaliação só com trincas reais, prevalência real e modelo leve
 
-Script: [`workflow_exp3_real_cracks.py`](workflow_exp3_real_cracks.py) · Saídas: `exp3_results.csv`, `exp3_cost_thresholds.csv`, `exp3_repeated_splits.csv`, `exp3_summary.json`
+Script: [`workflow_exp3_real_cracks.py`](workflow_exp3_real_cracks.py) · Saídas: `exp3_results.csv`, `exp3_cost_thresholds.csv`, `exp3_repeated_splits.csv`, `exp3_external_v1.csv`, `exp3_summary.json`
 
 **O que mudou em relação ao Exp 2 e por quê:**
 
@@ -38,14 +38,17 @@ Script: [`workflow_exp3_real_cracks.py`](workflow_exp3_real_cracks.py) · Saída
 | Features do treino calculadas **out-of-fold** (banco sem o próprio ovo) | No Exp 2C, cada ovo de treino era comparado com um banco que o continha (distância ≈ 0), um vazamento. |
 | **Modelo leve:** `MobileNetV3-Small` pré-treinada, congelada e truncada no bloco 8 (**191 mil parâmetros**), banco de 8000 × 72 (≈ 1,2 MB) | Roda em CPU sem GPU. O Exp 2 usava `MobileNetV3-Large` + `ResNet18` (~15 milhões de parâmetros). |
 | **Limiar pelo menor custo esperado por ovo:** $\text{custo}(\tau) = \pi \cdot C_{FN} \cdot \text{FNR}(\tau) + (1-\pi) \cdot C_{FP} \cdot \text{FPR}(\tau)$, com **prevalência real** $\pi$ | O Exp 2 ignorava $\pi$ (equivalente a supor 50% de ovos trincados). Na produção, trincas são ~1–5% dos ovos. |
+| **Teste externo na Coleta v1** (`Dataset/`: 10 trincas reais de outros ovos, câmera não fixa), fora do treino e da escolha do limiar | As fotos `cracked N.jpg` não têm horário, então não dá para agrupá-las por ovo para treinar sem vazamento; como teste externo, elas medem se o modelo generaliza para outra coleta e outra câmera. |
 | IC 95% por **bootstrap de ovos físicos** + **25 divisões aleatórias** | Fotos do mesmo ovo são correlacionadas; com só 7 ovos trincados reais, uma divisão única é instável. |
 
 **Resultados (avaliação só com trincas reais):**
 
-| Modelo | Teste (divisão principal) | Mediana em 25 divisões (P10–P90) | Só sessão 04/Nov* | Trincas a lápis (à parte) |
-| :--- | :---: | :---: | :---: | :---: |
-| **One-Class** (PatchCore leve, só ovos bons) | **89,1%** [75,2–94,7] | **89,3%** (86,8–91,7) | 81,7% (75,9–89,5) | 88,2% |
-| Híbrido (PatchCore + Regressão Logística treinada com lápis) | 74,6% [53,7–83,1] | 79,5% (73,8–84,3) | 79,7% (71,9–86,4) | 85,3% |
+| Modelo | Teste (divisão principal) | Mediana em 25 divisões (P10–P90) | Só sessão 04/Nov* | Trincas a lápis (à parte) | Teste externo v1** |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **One-Class** (PatchCore leve, só ovos bons) | **89,1%** [75,2–94,7] | **89,3%** (86,8–91,7) | 81,7% (75,9–89,5) | 88,2% | **97,3%** [94,7–99,3] |
+| Híbrido (PatchCore + Regressão Logística treinada com lápis) | 74,6% [53,7–83,1] | 79,5% (73,8–84,3) | 79,7% (71,9–86,4) | 85,3% | 89,9% [75,1–99,3] |
+
+\*\* *Teste externo:* a Coleta v1 (`Dataset/`: 181 bons + 10 trincas **reais**, outros ovos, câmera **não fixa**) nunca entra no treino, na validação ou na escolha do limiar. Com o limiar da v2 (prevalência 3%, custo 20:1), o One-Class detectou **10/10** trincas com **15,5%** de falso positivo (28/181). As trincas da v1 são quebras mais graves que as microtrincas da v2, então este teste mede **generalização para outra coleta/câmera**, não um desempenho "melhor". `cracked 1` e `cracked 2` são o mesmo ovo e contam como um só no bootstrap. Resultados por foto em `exp3_external_v1.csv`.
 
 \* *Controle de confusão:* as trincas reais só existem em `03/Nov` e `04/Nov`, e `04/Nov` tem zoom diferente. Medir o AUROC só dentro de `04/Nov` (bons e trincados com o mesmo zoom) mostra que o modelo detecta a trinca e não apenas a sessão — mas com desempenho menor (~82%) que o teste geral.
 
@@ -189,6 +192,7 @@ python train_neural_network.py
 ├── exp3_results.csv                    # Scores por foto + partição + tipo de trinca (real/lápis)
 ├── exp3_cost_thresholds.csv            # Limiar, recall, FPR e prejuízo por cenário de prevalência e custo
 ├── exp3_repeated_splits.csv            # AUROC nas 25 divisões aleatórias por ovo físico
+├── exp3_external_v1.csv                # Scores do teste externo na Coleta v1 (Dataset/)
 ├── exp3_summary.json                   # Resumo do Exp 3 (AUROC, IC 95%, latência em CPU)
 ├── workflow_exp2_new_sample.py         # Pipeline v2 (732 fotos): PatchCore 28x28 + HybridCrackNet + Custo
 ├── generate_exp2_visualizations.py     # Geração das pranchas comparativas v2 e gráficos ROC/Custo/Sessão
