@@ -54,3 +54,8 @@ ENV/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# ===============================
+# Rascunhos de posts (LinkedIn) — não versionar
+# ===============================
+LinkedIn/
